@@ -1,0 +1,23 @@
+{
+  "name": "@litsx/urql",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@urql/core": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@litsx/core": "*"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "2.1.9",
+    "typescript": "^5.1.6",
+    "vitest": "^2.1.9"
+  }
+}

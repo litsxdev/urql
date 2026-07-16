@@ -1,0 +1,21 @@
+{
+  "name": "@litsx/urql-codegen",
+  "version": "0.1.0",
+  "main": "./plugin.cjs",
+  "exports": {
+    ".": "./plugin.cjs",
+    "./plugin": "./plugin.cjs"
+  },
+  "scripts": {
+    "build": "echo 'urql-codegen plugin does not require a build step'",
+    "dev": "echo 'urql-codegen plugin does not have a watch mode'",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "graphql": "^16.7.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.6",
+    "vitest": "^2.1.9"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    /* JSX Configuration for LitSX */
+    "jsx": "react-jsx",
+    "jsxImportSource": "@litsx/core",
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Paths */
+    "baseUrl": ".",
+    "paths": {
+      "@litsx/urql": ["packages/urql/src"],
+      "@litsx/urql-codegen": ["packages/urql-codegen"],
+      "@litsx/urql/*": ["packages/urql/src/*"]
+    }
+  },
+  "include": ["packages"],
+  "exclude": ["node_modules", "dist"]
+}

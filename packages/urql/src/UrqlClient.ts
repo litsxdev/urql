@@ -1,0 +1,86 @@
+import {
+  createExecutionContextKey,
+  getCurrentExecutionContext,
+  type ExecutionContextKey,
+  type LitsxExecutionContext,
+} from '@litsx/core';
+import { type Client, type ClientOptions, createClient } from '@urql/core';
+
+export type UrqlClientResolver = () => Client | null | undefined;
+
+let urqlClient: Client | null = null;
+let urqlClientResolver: UrqlClientResolver | null = null;
+const URQL_CLIENT_KEY: ExecutionContextKey<Client> =
+  createExecutionContextKey<Client>('urql.client');
+
+function isUrqlClient(value: Client | ClientOptions): value is Client {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'query' in value &&
+    typeof value.query === 'function' &&
+    'mutation' in value &&
+    typeof value.mutation === 'function'
+  );
+}
+
+function createConfiguredClient(input: Client | ClientOptions): Client {
+  return isUrqlClient(input) ? input : createClient(input);
+}
+
+export function initializeUrqlClient(input: Client | ClientOptions): Client {
+  if (urqlClient) {
+    console.warn('URQL client already initialized, returning existing instance');
+    return urqlClient;
+  }
+
+  urqlClient = createConfiguredClient(input);
+  return urqlClient;
+}
+
+export function setUrqlClientResolver(
+  resolver: UrqlClientResolver | null
+): void {
+  urqlClientResolver = resolver;
+}
+
+export function setUrqlClient(
+  context: LitsxExecutionContext,
+  client: Client
+): void {
+  context.set(URQL_CLIENT_KEY, client);
+}
+
+export function getExecutionUrqlClient(
+  context: LitsxExecutionContext
+): Client | undefined {
+  return context.get(URQL_CLIENT_KEY);
+}
+
+export function getUrqlClient(): Client {
+  const executionContext = getCurrentExecutionContext();
+  const executionClient = executionContext
+    ? getExecutionUrqlClient(executionContext)
+    : undefined;
+  if (executionClient) {
+    return executionClient;
+  }
+
+  const resolvedClient = urqlClientResolver?.() ?? null;
+  if (resolvedClient) {
+    return resolvedClient;
+  }
+
+  if (urqlClient) {
+    return urqlClient;
+  }
+
+  throw new Error(
+    'URQL client not resolved. Call initializeUrqlClient() for the app scope, setUrqlClient(...) inside LitSX SSR execution contexts, or register a resolver with setUrqlClientResolver().'
+  );
+}
+
+export function resetUrqlClient(): void {
+  urqlClient = null;
+  urqlClientResolver = null;
+}

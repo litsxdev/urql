@@ -1,0 +1,237 @@
+# Get a list of products with optional fields demonstration
+query GetProducts($options: ProductListOptions) {
+  products(options: $options) {
+    items {
+      id
+      name
+      slug
+      description
+      enabled
+      featuredAsset {
+        id
+        preview
+        name
+      }
+      assets {
+        id
+        preview
+        name
+      }
+      variants {
+        id
+        name
+        sku
+        priceWithTax
+        currencyCode
+        stockLevel
+        featuredAsset {
+          id
+          preview
+        }
+      }
+      facetValues {
+        id
+        name
+      }
+    }
+    totalItems
+  }
+}
+
+# Get a single product by id or slug with optional parameters
+query GetProduct($id: ID, $slug: String) {
+  product(id: $id, slug: $slug) {
+    id
+    name
+    slug
+    description
+    enabled
+    languageCode
+    createdAt
+    updatedAt
+    featuredAsset {
+      id
+      preview
+      name
+      mimeType
+    }
+    assets {
+      id
+      preview
+      name
+      tags {
+        id
+        value
+      }
+    }
+    variants {
+      id
+      name
+      sku
+      priceWithTax
+      price
+      currencyCode
+      stockLevel
+      languageCode
+      featuredAsset {
+        id
+        preview
+      }
+      options {
+        id
+        name
+        code
+      }
+    }
+    collections {
+      id
+      name
+      slug
+    }
+    optionGroups {
+      id
+      name
+      code
+      options {
+        id
+        name
+        code
+      }
+    }
+  }
+}
+
+# Search products with price union handling
+query SearchProducts($input: SearchInput!) {
+  search(input: $input) {
+    items {
+      productId
+      productName
+      slug
+      description
+      sku
+      score
+      currencyCode
+      productAsset {
+        preview
+        id
+      }
+      productVariantAsset {
+        preview
+        id
+      }
+      price {
+        ... on PriceRange {
+          min
+          max
+        }
+        ... on SinglePrice {
+          value
+        }
+      }
+      priceWithTax {
+        ... on PriceRange {
+          min
+          max
+        }
+        ... on SinglePrice {
+          value
+        }
+      }
+      facetIds
+      collectionIds
+    }
+    totalItems
+    facetValues {
+      count
+      facetValue {
+        id
+        name
+        code
+      }
+    }
+    collections {
+      count
+      collection {
+        id
+        name
+        slug
+      }
+    }
+  }
+}
+
+# Get collections list with optional fields
+query GetCollections($options: CollectionListOptions) {
+  collections(options: $options) {
+    items {
+      id
+      name
+      slug
+      description
+      featuredAsset {
+        id
+        preview
+      }
+      parent {
+        id
+        name
+      }
+      children {
+        id
+        name
+      }
+    }
+    totalItems
+  }
+}
+
+# Get a single collection with optional parent and children
+query GetCollection($id: ID, $slug: String) {
+  collection(id: $id, slug: $slug) {
+    id
+    name
+    slug
+    description
+    featuredAsset {
+      id
+      preview
+    }
+    parent {
+      id
+      name
+    }
+    children {
+      id
+      name
+    }
+    breadcrumbs {
+      id
+      name
+      slug
+    }
+  }
+}
+
+# Get active channel information
+query GetActiveChannel {
+  activeChannel {
+    id
+    code
+    token
+    defaultLanguageCode
+    currencyCode
+    pricesIncludeTax
+  }
+}
+
+# Get available countries (important for optional address fields)
+query GetAvailableCountries {
+  availableCountries {
+    id
+    code
+    name
+    enabled
+  }
+}
+

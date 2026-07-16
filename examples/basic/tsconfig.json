@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "experimentalDecorators": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "noUnusedLocals": false
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"]
+}
