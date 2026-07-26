@@ -7,8 +7,8 @@ vi.mock('@litsx/core', () => ({
       __key: 'index-test-key',
     }) as ExecutionContextKey<T>,
   getCurrentExecutionContext: () => null,
-  useAsyncState: () => undefined,
-  useState<T>(value: T | (() => T)) {
+  useAfterUpdate: () => undefined,
+  useState<T>(_host: unknown, value: T | (() => T)) {
     const resolvedValue =
       typeof value === 'function' ? (value as () => T)() : value;
     return [resolvedValue, () => undefined] as const;

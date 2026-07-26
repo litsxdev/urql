@@ -1,12 +1,11 @@
 import { getUrqlClient } from '@litsx/urql';
-import { css } from 'lit';
-import { PostSearch } from './PostSearch';
-import { UserDirectory } from './UserDirectory';
+import { PostSearch } from './PostSearch.litsx';
+import { UserDirectory } from './UserDirectory.litsx';
 
 export function AppRoot() {
   getUrqlClient();
 
-  static styles = css`
+  static styles = `
     :host {
       display: block;
       min-height: 100vh;

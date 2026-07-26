@@ -1,8 +1,9 @@
+import '@webcomponents/scoped-custom-element-registry';
 import { initializeUrqlClient } from '@litsx/urql';
-import { AppRoot } from './components/AppRoot';
+import { AppRoot } from './components/AppRoot.litsx';
 
 initializeUrqlClient({
-  url: process.env.GRAPHQL_ENDPOINT || 'https://graphqlzero.almansi.me/api',
+  url: import.meta.env.VITE_GRAPHQL_ENDPOINT || 'https://graphqlzero.almansi.me/api',
 });
 
 // Register the component

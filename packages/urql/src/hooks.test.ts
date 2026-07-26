@@ -30,13 +30,27 @@ const hookRuntime = vi.hoisted(() => ({
   },
 }));
 
+const hookHost = {};
+const useQueryWithHost = useQuery as unknown as (
+  host: object,
+  options: UseQueryArgs<any>
+) => ReturnType<typeof useQuery>;
+const useMutationWithHost = useMutation as unknown as (
+  host: object,
+  options: UseMutationArgs<any>
+) => ReturnType<typeof useMutation>;
+const useSubscriptionWithHost = useSubscription as unknown as (
+  host: object,
+  options: UseSubscriptionArgs<any>
+) => ReturnType<typeof useSubscription>;
+
 vi.mock('@litsx/core', () => ({
   createExecutionContextKey: () =>
     Object.freeze({
       __key: `key-${hookRuntime.nextKeyId++}`,
     }) as ExecutionContextKey,
   getCurrentExecutionContext: () => hookRuntime.currentExecutionContext,
-  useState<T>(initialState: T | (() => T)) {
+  useState<T>(_host: unknown, initialState: T | (() => T)) {
     const slotIndex = hookRuntime.cursor++;
     if (!(slotIndex in hookRuntime.slots)) {
       hookRuntime.slots[slotIndex] =
@@ -55,7 +69,7 @@ vi.mock('@litsx/core', () => ({
 
     return [hookRuntime.slots[slotIndex] as T, setState] as const;
   },
-  useAsyncState(callback: () => unknown) {
+  useAfterUpdate(_host: unknown, callback: () => unknown) {
     hookRuntime.cleanups.push(callback() as (() => void) | void);
   },
 }));
@@ -66,6 +80,9 @@ import {
   executeQuery,
   executeSubscription,
   getDocumentLabel,
+  type UseMutationArgs,
+  type UseQueryArgs,
+  type UseSubscriptionArgs,
   useMutation,
   useQuery,
   useSubscription,
@@ -237,7 +254,7 @@ describe('hooks runtime helpers', () => {
     );
     client.query.mockReturnValue(createMockSource(result));
 
-    const [initialState, reexecute] = useQuery({
+    const [initialState, reexecute] = useQueryWithHost(hookHost, {
       client,
       context: { fetchOptions: { headers: { authorization: 'Bearer token' } } },
       query: 'ViewerQuery',
@@ -278,7 +295,7 @@ describe('hooks runtime helpers', () => {
   it('useQuery does not auto-execute while paused', () => {
     const client = createMockClient();
 
-    useQuery({
+    useQueryWithHost(hookHost, {
       client,
       pause: true,
       query: 'PausedQuery',
@@ -302,7 +319,7 @@ describe('hooks runtime helpers', () => {
       })
       .mockReturnValueOnce(deferredSource.source);
 
-    const [, reexecute] = useQuery({
+    const [, reexecute] = useQueryWithHost(hookHost, {
       client,
       query: 'ViewerQuery',
       variables: { id: '123' },
@@ -339,7 +356,7 @@ describe('hooks runtime helpers', () => {
     const deferredSource = createDeferredSource<{ viewer: { id: string } }, { id: string }>();
     client.query.mockReturnValue(deferredSource.source);
 
-    useQuery({
+    useQueryWithHost(hookHost, {
       client,
       query: 'ViewerQuery',
       variables: { id: '123' },
@@ -358,7 +375,7 @@ describe('hooks runtime helpers', () => {
     const result = createResult({ saveProduct: { id: 'p-1' } });
     client.mutation.mockReturnValue(createMockSource(result));
 
-    const [initialState, execute] = useMutation({
+    const [initialState, execute] = useMutationWithHost(hookHost, {
       client,
       context: { fetchOptions: { headers: { 'x-base': '1' } } },
       mutation: 'SaveProduct',
@@ -398,7 +415,7 @@ describe('hooks runtime helpers', () => {
       },
     });
 
-    useSubscription({
+    useSubscriptionWithHost(hookHost, {
       client,
       context: { url: 'wss://example.test/graphql' } as Partial<OperationContext>,
       subscription: 'NotificationsSubscription',
@@ -420,7 +437,7 @@ describe('hooks runtime helpers', () => {
   it('useSubscription does not auto-start while paused', () => {
     const client = createMockClient();
 
-    useSubscription({
+    useSubscriptionWithHost(hookHost, {
       client,
       pause: true,
       subscription: 'NotificationsSubscription',
@@ -446,7 +463,7 @@ describe('hooks runtime helpers', () => {
         },
       });
 
-    const [, start] = useSubscription({
+    const [, start] = useSubscriptionWithHost(hookHost, {
       client,
       subscription: 'NotificationsSubscription',
       variables: { first: 1 },

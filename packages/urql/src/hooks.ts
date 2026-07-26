@@ -1,4 +1,4 @@
-import { useAsyncState, useState } from '@litsx/core';
+import { useAfterUpdate, useState } from '@litsx/core';
 import {
   type AnyVariables,
   type Client,
@@ -13,6 +13,7 @@ import {
 import { getUrqlClient } from './UrqlClient';
 
 type Unsubscribe = () => void;
+type HookHost = object | undefined;
 
 export interface UseQueryState<
   TData = unknown,
@@ -108,6 +109,14 @@ function getVariables<TVariables extends AnyVariables>(
   variables?: TVariables
 ): TVariables {
   return variables ?? ({} as TVariables);
+}
+
+function getDependencyKey(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? '';
+  } catch {
+    return String(value);
+  }
 }
 
 function toState<TData, TVariables extends AnyVariables>(
@@ -407,13 +416,28 @@ export function useQuery<
   TVariables extends AnyVariables = AnyVariables,
 >(
   options: UseQueryArgs<TVariables>
+): UseQueryResponse<TData, TVariables>;
+export function useQuery<
+  TData = unknown,
+  TVariables extends AnyVariables = AnyVariables,
+>(
+  hostOrOptions: HookHost | UseQueryArgs<TVariables>,
+  providedOptions?: UseQueryArgs<TVariables>
 ): UseQueryResponse<TData, TVariables> {
-  const [observer] = useState(() => new QueryObserver<TData, TVariables>(options));
-  const [state, setState] = useState(observer.getSnapshot());
+  const host = providedOptions ? (hostOrOptions as HookHost) : undefined;
+  const options = (providedOptions ?? hostOrOptions) as UseQueryArgs<TVariables>;
+  const [observer] = useState(
+    host,
+    () => new QueryObserver<TData, TVariables>(options)
+  );
+  const [state, setState] = useState(host, observer.getSnapshot());
 
   observer.update(options);
 
-  useAsyncState(() => {
+  const contextKey = getDependencyKey(options.context);
+  const variablesKey = getDependencyKey(options.variables);
+
+  useAfterUpdate(host, () => {
     const unsubscribe = observer.subscribe(setState);
     if (!observer.isPaused()) {
       void observer.reexecute();
@@ -423,7 +447,7 @@ export function useQuery<
       unsubscribe();
       observer.dispose();
     };
-  }, [options.pause, options.requestPolicy, options.context, options.variables]);
+  }, [options.pause, options.requestPolicy, contextKey, variablesKey]);
 
   return [state, (context) => observer.reexecute(context)];
 }
@@ -433,21 +457,33 @@ export function useMutation<
   TVariables extends AnyVariables = AnyVariables,
 >(
   options: UseMutationArgs<TVariables>
+): UseMutationResponse<TData, TVariables>;
+export function useMutation<
+  TData = unknown,
+  TVariables extends AnyVariables = AnyVariables,
+>(
+  hostOrOptions: HookHost | UseMutationArgs<TVariables>,
+  providedOptions?: UseMutationArgs<TVariables>
 ): UseMutationResponse<TData, TVariables> {
+  const host = providedOptions ? (hostOrOptions as HookHost) : undefined;
+  const options = (providedOptions ?? hostOrOptions) as UseMutationArgs<TVariables>;
   const [observer] = useState(
+    host,
     () => new MutationObserver<TData, TVariables>(options)
   );
-  const [state, setState] = useState(observer.getSnapshot());
+  const [state, setState] = useState(host, observer.getSnapshot());
 
   observer.update(options);
 
-  useAsyncState(() => {
+  const contextKey = getDependencyKey(options.context);
+
+  useAfterUpdate(host, () => {
     const unsubscribe = observer.subscribe(setState);
     return () => {
       unsubscribe();
       observer.dispose();
     };
-  }, [options.context]);
+  }, [contextKey]);
 
   return [state, (variables, context) => observer.execute(variables, context)];
 }
@@ -457,15 +493,28 @@ export function useSubscription<
   TVariables extends AnyVariables = AnyVariables,
 >(
   options: UseSubscriptionArgs<TVariables>
+): UseSubscriptionResponse<TData, TVariables>;
+export function useSubscription<
+  TData = unknown,
+  TVariables extends AnyVariables = AnyVariables,
+>(
+  hostOrOptions: HookHost | UseSubscriptionArgs<TVariables>,
+  providedOptions?: UseSubscriptionArgs<TVariables>
 ): UseSubscriptionResponse<TData, TVariables> {
+  const host = providedOptions ? (hostOrOptions as HookHost) : undefined;
+  const options = (providedOptions ?? hostOrOptions) as UseSubscriptionArgs<TVariables>;
   const [observer] = useState(
+    host,
     () => new SubscriptionObserver<TData, TVariables>(options)
   );
-  const [state, setState] = useState(observer.getSnapshot());
+  const [state, setState] = useState(host, observer.getSnapshot());
 
   observer.update(options);
 
-  useAsyncState(() => {
+  const contextKey = getDependencyKey(options.context);
+  const variablesKey = getDependencyKey(options.variables);
+
+  useAfterUpdate(host, () => {
     const unsubscribe = observer.subscribe(setState);
     if (!observer.isPaused()) {
       observer.start();
@@ -475,7 +524,7 @@ export function useSubscription<
       unsubscribe();
       observer.dispose();
     };
-  }, [options.pause, options.context, options.variables]);
+  }, [options.pause, contextKey, variablesKey]);
 
   return [state, (context) => observer.start(context)];
 }

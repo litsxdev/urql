@@ -13,6 +13,18 @@ export interface CreateUrqlClientOptions
   exchanges?: ClientOptions['exchanges'];
 }
 
+function withGraphqlContentType(fetchOptions?: RequestInit): RequestInit {
+  const headers = new Headers(fetchOptions?.headers);
+  if (!headers.has('content-type')) {
+    headers.set('content-type', 'application/json');
+  }
+
+  return {
+    ...fetchOptions,
+    headers,
+  };
+}
+
 /**
  * Create and configure a URQL client for use in litsx applications
  * @param options Configuration options including GraphQL endpoint URL
@@ -25,7 +37,7 @@ export function createUrqlClient(
 
   return createClient({
     url,
-    fetchOptions,
+    fetchOptions: withGraphqlContentType(fetchOptions),
     exchanges: exchanges ?? [cacheExchange, fetchExchange],
     ...restOptions,
   });

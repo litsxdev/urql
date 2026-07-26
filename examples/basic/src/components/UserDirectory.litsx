@@ -1,15 +1,14 @@
 import { useState } from '@litsx/core';
-import { css } from 'lit';
 import {
   type GetUserQuery,
   useGetUserQuery,
   useGetUsersQuery,
-} from '../graphql';
+} from '../graphql/index.tsx';
 import { isPresent } from '../utils/isPresent';
 
 export function UserDirectory() {
   const [selectedUserId, setSelectedUserId] = useState('1');
-  static styles = css`
+  static styles = `
     :host {
       display: block;
     }
