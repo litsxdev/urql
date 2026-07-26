@@ -2,7 +2,7 @@ import { initializeUrqlClient } from '@litsx/urql';
 import { AppRoot } from './components/AppRoot';
 
 initializeUrqlClient({
-  url: process.env.GRAPHQL_ENDPOINT || 'https://demo.vendure.io/shop-api',
+  url: process.env.GRAPHQL_ENDPOINT || 'https://graphqlzero.almansi.me/api',
 });
 
 // Register the component

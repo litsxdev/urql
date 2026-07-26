@@ -1,8 +1,25 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "allowArbitraryExtensions": true,
+    "checkJs": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@litsx/core",
+    "baseUrl": ".",
+    "paths": {
+      "@litsx/urql": ["../../packages/urql/dist/index.d.ts"],
+      "@litsx/urql/*": ["../../packages/urql/dist/*"]
+    },
+    "ignoreDeprecations": "6.0",
+    "plugins": [
+      {
+        "name": "@litsx/typescript"
+      }
+    ],
     "outDir": "./dist",
-    "rootDir": "./src",
     "experimentalDecorators": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "noUnusedLocals": false

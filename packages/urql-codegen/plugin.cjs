@@ -52,7 +52,7 @@ function pascalCaseOperationKind(kind) {
 function createHook(operationName, operationKind, dataTypeName) {
   if (operationKind === 'query') {
     return `
-export function use${operationName}Query(options${operationName === 'GetActiveChannel' || operationName === 'GetAvailableCountries' ? '?' : '?'}: Omit<UseQueryArgs<${dataTypeName}Variables>, 'query'> = {}) {
+export function use${operationName}Query(options: Omit<UseQueryArgs<${dataTypeName}Variables>, 'query'> = {}) {
   return useQuery<${dataTypeName}, ${dataTypeName}Variables>({
     query: ${operationName}Document,
     ...options,
@@ -172,7 +172,6 @@ import {
   type UseMutationArgs,
   type UseQueryArgs,
   type UseSubscriptionArgs,
-  Omit,
   executeMutation,
   executeQuery,
   useMutation,

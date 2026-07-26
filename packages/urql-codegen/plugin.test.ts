@@ -137,15 +137,15 @@ describe('@litsx/urql-codegen plugin', () => {
     );
     const generatedTypes = fs.readFileSync(generatedTypesPath, 'utf8');
 
+    expect(generatedTypes).toContain(`street?: Maybe<Scalars['String']['output']>;`);
+    expect(generatedTypes).toContain(`suite?: Maybe<Scalars['String']['output']>;`);
     expect(generatedTypes).toContain(`city?: Maybe<Scalars['String']['output']>;`);
-    expect(generatedTypes).toContain(`country: Country;`);
-    expect(generatedTypes).toContain(`createdAt: Scalars['DateTime']['output'];`);
-    expect(generatedTypes).toContain(`streetLine1: Scalars['String']['output'];`);
-    expect(generatedTypes).toContain(`streetLine2?: Maybe<Scalars['String']['output']>;`);
-    expect(generatedTypes).toContain(`updatedAt: Scalars['DateTime']['output'];`);
+    expect(generatedTypes).toContain(`zipcode?: Maybe<Scalars['String']['output']>;`);
+    expect(generatedTypes).toContain(`geo?: Maybe<Geo>;`);
 
-    expect(generatedTypes).toContain(`product?: { __typename?: 'Product'`);
-    expect(generatedTypes).toContain(`featuredAsset?: { __typename?: 'Asset'`);
-    expect(generatedTypes).toContain(`parent?: { __typename?: 'Collection'`);
+    expect(generatedTypes).toContain(`users?: { __typename?: 'UsersPage'`);
+    expect(generatedTypes).toContain(`user?: { __typename?: 'User'`);
+    expect(generatedTypes).toContain(`posts?: { __typename?: 'PostsPage'`);
+    expect(generatedTypes).toContain(`albums?: { __typename?: 'AlbumsPage'`);
   });
 });

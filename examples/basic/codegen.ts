@@ -6,7 +6,7 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 const config: CodegenConfig = {
   overwrite: true,
-  schema: path.join(rootDir, "vendure-schema.graphql"),
+  schema: path.join(rootDir, "graphqlzero-schema.graphql"),
   documents: [path.join(rootDir, "src/graphql/**/*.graphql")],
   config: {
     scalars: {

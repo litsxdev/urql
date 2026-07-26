@@ -8,14 +8,18 @@ import {
   gql,
 } from '@urql/core';
 
+type ExecutionContextKey = {
+  __key: string;
+};
+
 const hookRuntime = vi.hoisted(() => ({
   cursor: 0,
   slots: [] as unknown[],
   cleanups: [] as Array<(() => void) | void>,
   currentExecutionContext: null as {
-    get<T>(key: ExecutionContextKey<T>): T | undefined;
-    set<T>(key: ExecutionContextKey<T>, value: T): void;
-    has<T>(key: ExecutionContextKey<T>): boolean;
+    get<T>(key: ExecutionContextKey): T | undefined;
+    set<T>(key: ExecutionContextKey, value: T): void;
+    has(key: ExecutionContextKey): boolean;
   } | null,
   nextKeyId: 0,
   reset() {
@@ -27,10 +31,10 @@ const hookRuntime = vi.hoisted(() => ({
 }));
 
 vi.mock('@litsx/core', () => ({
-  createExecutionContextKey: <T>() =>
+  createExecutionContextKey: () =>
     Object.freeze({
       __key: `key-${hookRuntime.nextKeyId++}`,
-    }) as ExecutionContextKey<T>,
+    }) as ExecutionContextKey,
   getCurrentExecutionContext: () => hookRuntime.currentExecutionContext,
   useState<T>(initialState: T | (() => T)) {
     const slotIndex = hookRuntime.cursor++;

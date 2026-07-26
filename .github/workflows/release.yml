@@ -1,0 +1,288 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows:
+      - Test
+      - Release Validate
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Detect Ready Release
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.gate.outputs.ready }}
+      has_changesets: ${{ steps.pending.outputs.has_changesets }}
+    steps:
+      - name: Wait for required workflows
+        id: gate
+        uses: actions/github-script@v8
+        with:
+          script: |
+            if (context.eventName === "workflow_dispatch") {
+              if (context.ref === "refs/heads/main") {
+                core.setOutput("ready", "true");
+                return;
+              }
+
+              core.setOutput("ready", "false");
+              return;
+            }
+
+            const requiredWorkflows = ["Test", "Release Validate"];
+            const { owner, repo } = context.repo;
+            const branch = context.payload.workflow_run.head_branch;
+            const headSha = context.payload.workflow_run.head_sha;
+            const eventName = context.payload.workflow_run.event;
+
+            if (branch !== "main" || eventName !== "push") {
+              core.setOutput("ready", "false");
+              return;
+            }
+
+            for (const workflowName of requiredWorkflows) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                branch,
+                event: eventName,
+                status: "completed",
+                per_page: 100,
+              });
+
+              const run = data.workflow_runs.find((candidate) =>
+                candidate.name === workflowName && candidate.head_sha === headSha,
+              );
+
+              if (!run || run.conclusion !== "success") {
+                core.setOutput("ready", "false");
+                return;
+              }
+            }
+
+            core.setOutput("ready", "true");
+
+      - name: Checkout repository
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          package-manager-cache: false
+
+      - name: Enable Yarn
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+        run: |
+          corepack enable
+          corepack prepare yarn@4.10.3 --activate
+
+      - name: Cache Yarn state
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+        uses: actions/cache@v5
+        with:
+          path: |
+            .yarn/install-state.gz
+            .yarn-cache
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+        run: corepack yarn install --immutable
+
+      - name: Detect pending changesets
+        id: pending
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+        run: |
+          if find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print -quit | grep -q .; then
+            echo "has_changesets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changesets=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    name: Publish Packages
+    needs: plan
+    if: |
+      needs.plan.outputs.ready == 'true' &&
+      (needs.plan.outputs.has_changesets == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: npm-release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-contents: write
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+          registry-url: https://registry.npmjs.org
+
+      - name: Enable Yarn
+        run: |
+          corepack enable
+          corepack prepare yarn@4.10.3 --activate
+
+      - name: Cache Yarn state
+        uses: actions/cache@v5
+        with:
+          path: |
+            .yarn/install-state.gz
+            .yarn-cache
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: corepack yarn install --immutable
+
+      - name: Materialize release versions
+        if: needs.plan.outputs.has_changesets == 'true'
+        run: corepack yarn changeset:version
+
+      - name: Refresh lockfile after versioning
+        if: needs.plan.outputs.has_changesets == 'true'
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
+        run: corepack yarn install
+
+      - name: Publish packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: corepack yarn release:publish
+
+      - name: Resolve release app bot user
+        id: app-bot-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          echo "user_id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+
+      - name: Commit release version updates
+        id: version_commit
+        env:
+          RELEASE_PUSH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.app-bot-user.outputs.user_id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${RELEASE_PUSH_TOKEN}@github.com/${{ github.repository }}.git"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No version updates to commit"
+            echo "created_commit=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "chore(release): version packages [skip ci]"
+          echo "created_commit=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push release version commit
+        if: steps.version_commit.outputs.created_commit == 'true'
+        run: git push origin HEAD:main
+
+      - name: Create package tags
+        run: node scripts/release/create-release-tags.cjs
+
+      - name: Push release tags
+        run: git push origin --tags
+
+      - name: Build GitHub release payload
+        run: |
+          mkdir -p .release-artifacts
+          node scripts/release/build-github-release.cjs > .release-artifacts/github-release.json
+
+      - name: Create GitHub release
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const fs = require("node:fs");
+            const release = JSON.parse(
+              fs.readFileSync(".release-artifacts/github-release.json", "utf8"),
+            );
+
+            if (!Array.isArray(release.packages) || release.packages.length === 0) {
+              core.info("No published packages detected for this release commit");
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+
+            let existingRelease = null;
+            try {
+              const result = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: release.tagName,
+              });
+              existingRelease = result.data;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+
+            const payload = {
+              owner,
+              repo,
+              tag_name: release.tagName,
+              target_commitish: release.targetCommitish,
+              name: release.name,
+              body: release.body,
+            };
+
+            if (existingRelease) {
+              await github.rest.repos.updateRelease({
+                ...payload,
+                release_id: existingRelease.id,
+              });
+            } else {
+              await github.rest.repos.createRelease(payload);
+            }
+
+      - name: Build npm tarballs
+        run: corepack yarn release:artifacts
+
+      - name: Upload npm tarballs
+        uses: actions/upload-artifact@v6
+        with:
+          name: npm-release-artifacts
+          path: .release-artifacts/npm/*.tgz

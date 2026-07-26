@@ -6,9 +6,11 @@ import {
   fetchExchange,
 } from '@urql/core';
 
-export interface CreateUrqlClientOptions extends ClientOptions {
+export interface CreateUrqlClientOptions
+  extends Omit<ClientOptions, 'url' | 'fetchOptions' | 'exchanges'> {
   url: string;
   fetchOptions?: RequestInit;
+  exchanges?: ClientOptions['exchanges'];
 }
 
 /**

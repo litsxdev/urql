@@ -1,0 +1,258 @@
+import { useState } from '@litsx/core';
+import {
+  useGetAlbumsQuery,
+  useSearchPostsQuery,
+} from '../graphql';
+import { isPresent } from '../utils/isPresent';
+
+export function PostSearch() {
+  const [searchTerm, setSearchTerm] = useState('qui');
+  static styles = `
+    :host {
+      display: block;
+    }
+
+    .panel {
+      display: grid;
+      gap: 20px;
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(24, 34, 47, 0.08);
+      box-shadow: 0 20px 40px rgba(17, 24, 39, 0.06);
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    .subtle {
+      margin: 6px 0 0;
+      color: #5a6a7d;
+      line-height: 1.5;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search {
+      width: min(100%, 420px);
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(24, 34, 47, 0.12);
+      background: #fff;
+      font: inherit;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+      gap: 20px;
+    }
+
+    .posts {
+      display: grid;
+      gap: 14px;
+    }
+
+    .post {
+      padding: 18px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid rgba(24, 34, 47, 0.08);
+    }
+
+    .post h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+
+    .post p {
+      margin: 0;
+      color: #4f6073;
+      line-height: 1.55;
+    }
+
+    .post-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      color: #708093;
+      font-size: 0.9rem;
+    }
+
+    .aside {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .aside-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid rgba(24, 34, 47, 0.08);
+    }
+
+    .album-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .album {
+      display: grid;
+      gap: 10px;
+    }
+
+    .thumbs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .thumbs img,
+    .thumb-placeholder {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #eef4fa;
+    }
+
+    .muted {
+      color: #708093;
+      font-style: italic;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  `;
+
+  const [postsResult] = useSearchPostsQuery({
+    variables: {
+      options: {
+        paginate: {
+          page: 1,
+          limit: 6,
+        },
+        search: {
+          q: searchTerm.trim() || undefined,
+        },
+      },
+    },
+  });
+  const [albumsResult] = useGetAlbumsQuery({
+    variables: {
+      options: {
+        paginate: {
+          page: 1,
+          limit: 4,
+        },
+      },
+    },
+  });
+
+  const posts = (postsResult.data?.posts?.data ?? []).filter(isPresent);
+  const albums = (albumsResult.data?.albums?.data ?? []).filter(isPresent);
+
+  function getExcerpt(body?: string | null): string {
+    if (!body) {
+      return 'No body content available.';
+    }
+
+    return body.length > 120 ? `${body.slice(0, 117)}...` : body;
+  }
+
+  return (
+    <section class="panel">
+      <div>
+        <h2>Post search</h2>
+        <p class="subtle">
+          A searchable post feed plus related comments and a side panel with albums
+          and photo thumbnails.
+        </p>
+      </div>
+
+      <div class="toolbar">
+        <input
+          class="search"
+          type="text"
+          value={searchTerm}
+          placeholder="Search public posts..."
+          @change={(event: Event) =>
+            setSearchTerm((event.target as HTMLInputElement).value)}
+        />
+        <span class="subtle">
+          {postsResult.data?.posts?.meta?.totalCount ?? posts.length} matching posts
+        </span>
+      </div>
+
+      <div class="layout">
+        <div class="posts">
+          {postsResult.error && <p class="muted">Error: {postsResult.error.message}</p>}
+          {postsResult.fetching && !posts.length && <p class="muted">Loading posts...</p>}
+
+          {posts.map((post) => (
+            <article key={(post.id ?? post.title)!} class="post">
+              <h3>{post.title ?? 'Untitled post'}</h3>
+              <p>{getExcerpt(post.body)}</p>
+              <div class="post-meta">
+                <span>Author: {post.user?.name ?? 'Unknown author'}</span>
+                <span>@{post.user?.username ?? 'unknown'}</span>
+                <span>
+                  Comments: {(post.comments?.data ?? []).filter(isPresent).length}
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <aside class="aside">
+          <div class="aside-card">
+            <strong>Recent albums</strong>
+            <p class="subtle">Each album includes a few thumbnail photos.</p>
+          </div>
+
+          <div class="album-grid">
+            {albumsResult.fetching && !albums.length && <p class="muted">Loading albums...</p>}
+
+            {albums.map((album) => (
+              <section
+                key={album.id ?? album.title ?? 'untitled-album'}
+                class="aside-card album"
+              >
+                <strong>{album.title ?? 'Untitled album'}</strong>
+                <span class="subtle">{album.user?.name ?? 'Unknown owner'}</span>
+                <div class="thumbs">
+                  {(album.photos?.data ?? []).filter(isPresent).map((photo) =>
+                    photo.thumbnailUrl ? (
+                      <img
+                        key={photo.id ?? photo.title ?? 'album-photo'}
+                        src={photo.thumbnailUrl}
+                        alt={photo.title ?? 'Album photo'}
+                      />
+                    ) : (
+                      <div
+                        key={photo.id ?? photo.title ?? 'album-photo-placeholder'}
+                        class="thumb-placeholder"
+                      />
+                    )
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}

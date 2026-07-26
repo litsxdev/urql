@@ -5,7 +5,6 @@ import {
   type UseMutationArgs,
   type UseQueryArgs,
   type UseSubscriptionArgs,
-  Omit,
   executeMutation,
   executeQuery,
   useMutation,
@@ -13,290 +12,167 @@ import {
   useSubscription,
 } from '@litsx/urql';
 import type {
-  GetProductsQuery,
-  GetProductsQueryVariables,
-  GetProductQuery,
-  GetProductQueryVariables,
-  SearchProductsQuery,
-  SearchProductsQueryVariables,
-  GetCollectionsQuery,
-  GetCollectionsQueryVariables,
-  GetCollectionQuery,
-  GetCollectionQueryVariables,
-  GetActiveChannelQuery,
-  GetActiveChannelQueryVariables,
-  GetAvailableCountriesQuery,
-  GetAvailableCountriesQueryVariables,
+  GetUsersQuery,
+  GetUsersQueryVariables,
+  GetUserQuery,
+  GetUserQueryVariables,
+  SearchPostsQuery,
+  SearchPostsQueryVariables,
+  GetAlbumsQuery,
+  GetAlbumsQueryVariables,
 } from './types';
 
 export type {
-  GetProductsQuery,
-  GetProductsQueryVariables,
-  GetProductQuery,
-  GetProductQueryVariables,
-  SearchProductsQuery,
-  SearchProductsQueryVariables,
-  GetCollectionsQuery,
-  GetCollectionsQueryVariables,
-  GetCollectionQuery,
-  GetCollectionQueryVariables,
-  GetActiveChannelQuery,
-  GetActiveChannelQueryVariables,
-  GetAvailableCountriesQuery,
-  GetAvailableCountriesQueryVariables,
+  GetUsersQuery,
+  GetUsersQueryVariables,
+  GetUserQuery,
+  GetUserQueryVariables,
+  SearchPostsQuery,
+  SearchPostsQueryVariables,
+  GetAlbumsQuery,
+  GetAlbumsQueryVariables,
 } from './types';
 
-export const GetProductsDocument = gql<GetProductsQuery, GetProductsQueryVariables>(`query GetProducts($options: ProductListOptions) {
-  products(options: $options) {
-    items {
+export const GetUsersDocument = gql<GetUsersQuery, GetUsersQueryVariables>(`query GetUsers($options: PageQueryOptions) {
+  users(options: $options) {
+    data {
       id
       name
-      slug
-      description
-      enabled
-      featuredAsset {
-        id
-        preview
+      username
+      email
+      phone
+      website
+      company {
         name
+        catchPhrase
       }
-      assets {
-        id
-        preview
-        name
+      address {
+        city
+        street
+        zipcode
+        geo {
+          lat
+          lng
+        }
       }
-      variants {
+    }
+    meta {
+      totalCount
+    }
+  }
+}`);
+
+
+export const GetUserDocument = gql<GetUserQuery, GetUserQueryVariables>(`query GetUser($id: ID!) {
+  user(id: $id) {
+    id
+    name
+    username
+    email
+    phone
+    website
+    company {
+      name
+      catchPhrase
+      bs
+    }
+    address {
+      street
+      suite
+      city
+      zipcode
+      geo {
+        lat
+        lng
+      }
+    }
+    posts(options: {paginate: {page: 1, limit: 3}}) {
+      data {
+        id
+        title
+      }
+    }
+    albums(options: {paginate: {page: 1, limit: 2}}) {
+      data {
+        id
+        title
+      }
+    }
+    todos(options: {paginate: {page: 1, limit: 4}}) {
+      data {
+        id
+        title
+        completed
+      }
+    }
+  }
+}`);
+
+
+export const SearchPostsDocument = gql<SearchPostsQuery, SearchPostsQueryVariables>(`query SearchPosts($options: PageQueryOptions) {
+  posts(options: $options) {
+    data {
+      id
+      title
+      body
+      user {
         id
         name
-        sku
-        priceWithTax
-        currencyCode
-        stockLevel
-        featuredAsset {
+        username
+      }
+      comments(options: {paginate: {page: 1, limit: 2}}) {
+        data {
           id
-          preview
+          name
+          email
         }
       }
-      facetValues {
-        id
-        name
-      }
     }
-    totalItems
-  }
-}`);
-
-
-export const GetProductDocument = gql<GetProductQuery, GetProductQueryVariables>(`query GetProduct($id: ID, $slug: String) {
-  product(id: $id, slug: $slug) {
-    id
-    name
-    slug
-    description
-    enabled
-    languageCode
-    createdAt
-    updatedAt
-    featuredAsset {
-      id
-      preview
-      name
-      mimeType
-    }
-    assets {
-      id
-      preview
-      name
-      tags {
-        id
-        value
-      }
-    }
-    variants {
-      id
-      name
-      sku
-      priceWithTax
-      price
-      currencyCode
-      stockLevel
-      languageCode
-      featuredAsset {
-        id
-        preview
-      }
-      options {
-        id
-        name
-        code
-      }
-    }
-    collections {
-      id
-      name
-      slug
-    }
-    optionGroups {
-      id
-      name
-      code
-      options {
-        id
-        name
-        code
-      }
+    meta {
+      totalCount
     }
   }
 }`);
 
 
-export const SearchProductsDocument = gql<SearchProductsQuery, SearchProductsQueryVariables>(`query SearchProducts($input: SearchInput!) {
-  search(input: $input) {
-    items {
-      productId
-      productName
-      slug
-      description
-      sku
-      score
-      currencyCode
-      productAsset {
-        preview
+export const GetAlbumsDocument = gql<GetAlbumsQuery, GetAlbumsQueryVariables>(`query GetAlbums($options: PageQueryOptions) {
+  albums(options: $options) {
+    data {
+      id
+      title
+      user {
         id
+        name
       }
-      productVariantAsset {
-        preview
-        id
-      }
-      price {
-        ... on PriceRange {
-          min
-          max
-        }
-        ... on SinglePrice {
-          value
+      photos(options: {paginate: {page: 1, limit: 3}}) {
+        data {
+          id
+          title
+          thumbnailUrl
         }
       }
-      priceWithTax {
-        ... on PriceRange {
-          min
-          max
-        }
-        ... on SinglePrice {
-          value
-        }
-      }
-      facetIds
-      collectionIds
     }
-    totalItems
-    facetValues {
-      count
-      facetValue {
-        id
-        name
-        code
-      }
-    }
-    collections {
-      count
-      collection {
-        id
-        name
-        slug
-      }
+    meta {
+      totalCount
     }
   }
 }`);
 
 
-export const GetCollectionsDocument = gql<GetCollectionsQuery, GetCollectionsQueryVariables>(`query GetCollections($options: CollectionListOptions) {
-  collections(options: $options) {
-    items {
-      id
-      name
-      slug
-      description
-      featuredAsset {
-        id
-        preview
-      }
-      parent {
-        id
-        name
-      }
-      children {
-        id
-        name
-      }
-    }
-    totalItems
-  }
-}`);
-
-
-export const GetCollectionDocument = gql<GetCollectionQuery, GetCollectionQueryVariables>(`query GetCollection($id: ID, $slug: String) {
-  collection(id: $id, slug: $slug) {
-    id
-    name
-    slug
-    description
-    featuredAsset {
-      id
-      preview
-    }
-    parent {
-      id
-      name
-    }
-    children {
-      id
-      name
-    }
-    breadcrumbs {
-      id
-      name
-      slug
-    }
-  }
-}`);
-
-
-export const GetActiveChannelDocument = gql<GetActiveChannelQuery, GetActiveChannelQueryVariables>(`query GetActiveChannel {
-  activeChannel {
-    id
-    code
-    token
-    defaultLanguageCode
-    currencyCode
-    pricesIncludeTax
-  }
-}`);
-
-
-export const GetAvailableCountriesDocument = gql<GetAvailableCountriesQuery, GetAvailableCountriesQueryVariables>(`query GetAvailableCountries {
-  availableCountries {
-    id
-    code
-    name
-    enabled
-  }
-}`);
-
-
-export function useGetProductsQuery(options?: Omit<UseQueryArgs<GetProductsQueryVariables>, 'query'> = {}) {
-  return useQuery<GetProductsQuery, GetProductsQueryVariables>({
-    query: GetProductsDocument,
+export function useGetUsersQuery(options: Omit<UseQueryArgs<GetUsersQueryVariables>, 'query'> = {}) {
+  return useQuery<GetUsersQuery, GetUsersQueryVariables>({
+    query: GetUsersDocument,
     ...options,
   });
 }
 
-export async function ssrGetProductsQuery(
-  variables: GetProductsQueryVariables,
+export async function ssrGetUsersQuery(
+  variables: GetUsersQueryVariables,
   context?: Partial<OperationContext>,
   client?: Client
 ) {
-  return executeQuery<GetProductsQuery, GetProductsQueryVariables>(
-    GetProductsDocument,
+  return executeQuery<GetUsersQuery, GetUsersQueryVariables>(
+    GetUsersDocument,
     variables,
     context,
     client
@@ -304,20 +180,20 @@ export async function ssrGetProductsQuery(
 }
 
 
-export function useGetProductQuery(options?: Omit<UseQueryArgs<GetProductQueryVariables>, 'query'> = {}) {
-  return useQuery<GetProductQuery, GetProductQueryVariables>({
-    query: GetProductDocument,
+export function useGetUserQuery(options: Omit<UseQueryArgs<GetUserQueryVariables>, 'query'> = {}) {
+  return useQuery<GetUserQuery, GetUserQueryVariables>({
+    query: GetUserDocument,
     ...options,
   });
 }
 
-export async function ssrGetProductQuery(
-  variables: GetProductQueryVariables,
+export async function ssrGetUserQuery(
+  variables: GetUserQueryVariables,
   context?: Partial<OperationContext>,
   client?: Client
 ) {
-  return executeQuery<GetProductQuery, GetProductQueryVariables>(
-    GetProductDocument,
+  return executeQuery<GetUserQuery, GetUserQueryVariables>(
+    GetUserDocument,
     variables,
     context,
     client
@@ -325,20 +201,20 @@ export async function ssrGetProductQuery(
 }
 
 
-export function useSearchProductsQuery(options?: Omit<UseQueryArgs<SearchProductsQueryVariables>, 'query'> = {}) {
-  return useQuery<SearchProductsQuery, SearchProductsQueryVariables>({
-    query: SearchProductsDocument,
+export function useSearchPostsQuery(options: Omit<UseQueryArgs<SearchPostsQueryVariables>, 'query'> = {}) {
+  return useQuery<SearchPostsQuery, SearchPostsQueryVariables>({
+    query: SearchPostsDocument,
     ...options,
   });
 }
 
-export async function ssrSearchProductsQuery(
-  variables: SearchProductsQueryVariables,
+export async function ssrSearchPostsQuery(
+  variables: SearchPostsQueryVariables,
   context?: Partial<OperationContext>,
   client?: Client
 ) {
-  return executeQuery<SearchProductsQuery, SearchProductsQueryVariables>(
-    SearchProductsDocument,
+  return executeQuery<SearchPostsQuery, SearchPostsQueryVariables>(
+    SearchPostsDocument,
     variables,
     context,
     client
@@ -346,83 +222,20 @@ export async function ssrSearchProductsQuery(
 }
 
 
-export function useGetCollectionsQuery(options?: Omit<UseQueryArgs<GetCollectionsQueryVariables>, 'query'> = {}) {
-  return useQuery<GetCollectionsQuery, GetCollectionsQueryVariables>({
-    query: GetCollectionsDocument,
+export function useGetAlbumsQuery(options: Omit<UseQueryArgs<GetAlbumsQueryVariables>, 'query'> = {}) {
+  return useQuery<GetAlbumsQuery, GetAlbumsQueryVariables>({
+    query: GetAlbumsDocument,
     ...options,
   });
 }
 
-export async function ssrGetCollectionsQuery(
-  variables: GetCollectionsQueryVariables,
+export async function ssrGetAlbumsQuery(
+  variables: GetAlbumsQueryVariables,
   context?: Partial<OperationContext>,
   client?: Client
 ) {
-  return executeQuery<GetCollectionsQuery, GetCollectionsQueryVariables>(
-    GetCollectionsDocument,
-    variables,
-    context,
-    client
-  );
-}
-
-
-export function useGetCollectionQuery(options?: Omit<UseQueryArgs<GetCollectionQueryVariables>, 'query'> = {}) {
-  return useQuery<GetCollectionQuery, GetCollectionQueryVariables>({
-    query: GetCollectionDocument,
-    ...options,
-  });
-}
-
-export async function ssrGetCollectionQuery(
-  variables: GetCollectionQueryVariables,
-  context?: Partial<OperationContext>,
-  client?: Client
-) {
-  return executeQuery<GetCollectionQuery, GetCollectionQueryVariables>(
-    GetCollectionDocument,
-    variables,
-    context,
-    client
-  );
-}
-
-
-export function useGetActiveChannelQuery(options?: Omit<UseQueryArgs<GetActiveChannelQueryVariables>, 'query'> = {}) {
-  return useQuery<GetActiveChannelQuery, GetActiveChannelQueryVariables>({
-    query: GetActiveChannelDocument,
-    ...options,
-  });
-}
-
-export async function ssrGetActiveChannelQuery(
-  variables: GetActiveChannelQueryVariables,
-  context?: Partial<OperationContext>,
-  client?: Client
-) {
-  return executeQuery<GetActiveChannelQuery, GetActiveChannelQueryVariables>(
-    GetActiveChannelDocument,
-    variables,
-    context,
-    client
-  );
-}
-
-
-export function useGetAvailableCountriesQuery(options?: Omit<UseQueryArgs<GetAvailableCountriesQueryVariables>, 'query'> = {}) {
-  return useQuery<GetAvailableCountriesQuery, GetAvailableCountriesQueryVariables>({
-    query: GetAvailableCountriesDocument,
-    ...options,
-  });
-}
-
-export async function ssrGetAvailableCountriesQuery(
-  variables: GetAvailableCountriesQueryVariables,
-  context?: Partial<OperationContext>,
-  client?: Client
-) {
-  return executeQuery<GetAvailableCountriesQuery, GetAvailableCountriesQueryVariables>(
-    GetAvailableCountriesDocument,
+  return executeQuery<GetAlbumsQuery, GetAlbumsQueryVariables>(
+    GetAlbumsDocument,
     variables,
     context,
     client

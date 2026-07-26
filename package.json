@@ -2,16 +2,27 @@
   "name": "litsx-urql",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "yarn@4.10.3",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "build": "yarn workspaces foreach -A -t run build",
+    "changeset": "changeset",
+    "changeset:status": "changeset status",
+    "changeset:version": "changeset version",
+    "ci:test": "yarn build && yarn test && yarn example:codegen",
     "dev": "yarn workspaces foreach -A run dev",
+    "release:artifacts": "node scripts/release/build-release-artifacts.cjs",
+    "release:build:public": "node scripts/release/build-public-packages.cjs",
+    "release:check": "yarn release:build:public && node scripts/release/check-release-packages.cjs && yarn test && yarn example:codegen",
+    "release:github": "node scripts/release/build-github-release.cjs",
+    "release:publish": "yarn release:check && changeset publish",
     "test": "yarn workspaces foreach -A run test",
     "example:codegen": "yarn --cwd examples/basic codegen"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
     "typescript": "^5.1.6"
   }
 }
