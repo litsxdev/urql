@@ -565,6 +565,7 @@ __metadata:
   dependencies:
     "@urql/core": "npm:^6.0.3"
     "@vitest/coverage-v8": "npm:2.1.9"
+    rollup: "npm:^4.62.2"
     typescript: "npm:^5.1.6"
     vitest: "npm:^2.1.9"
   peerDependencies:
@@ -1853,7 +1854,6 @@ __metadata:
   resolution: "litsx-urql@workspace:."
   dependencies:
     "@changesets/cli": "npm:^2.31.1"
-    rollup: "npm:^4.62.2"
     typescript: "npm:^5.1.6"
   languageName: unknown
   linkType: soft
