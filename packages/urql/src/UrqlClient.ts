@@ -8,7 +8,7 @@ import { type Client, type ClientOptions, createClient } from '@urql/core';
 import {
   createUrqlClient,
   type CreateUrqlClientOptions,
-} from './createUrqlClient';
+} from './createUrqlClient.js';
 
 export type UrqlClientResolver = () => Client | null | undefined;
 

@@ -10,7 +10,7 @@ import {
   type RequestPolicy,
   getOperationName,
 } from '@urql/core';
-import { getUrqlClient } from './UrqlClient';
+import { getUrqlClient } from './UrqlClient.js';
 
 type Unsubscribe = () => void;
 type HookHost = object | undefined;

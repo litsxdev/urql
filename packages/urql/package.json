@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "description": "URQL runtime hooks and client integration for LitSX",
   "author": "LitSX Team",
+  "type": "module",
   "license": "Apache-2.0",
   "homepage": "https://github.com/litsxdev/urql",
   "bugs": {
@@ -22,6 +23,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     }
   },
@@ -29,8 +31,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "rm -rf dist .build && tsc --emitDeclarationOnly --outDir dist && tsc --declaration false --declarationMap false --outDir .build && rollup --config rollup.config.mjs && rm -rf .build",
+    "dev": "yarn build",
     "clean": "rm -rf dist",
     "test": "vitest run"
   },

@@ -1,3 +1,3 @@
-export * from './createUrqlClient';
-export * from './hooks';
-export * from './UrqlClient';
+export * from './createUrqlClient.js';
+export * from './hooks.js';
+export * from './UrqlClient.js';

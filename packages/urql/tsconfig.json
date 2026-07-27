@@ -1,12 +1,16 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    // NodeNext preserves ESM semantics and requires explicit extensions in
+    // emitted relative imports, so the npm package works in Node ESM.
     "allowImportingTsExtensions": false,
     "declaration": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src"
   },
   "include": ["src"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "src/**/*.test.ts"]
 }
