@@ -1,6 +1,6 @@
 {
   "name": "@litsx/urql-codegen",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GraphQL Code Generator plugin for LitSX URQL hooks",
   "author": "LitSX Team",
   "license": "Apache-2.0",
