@@ -70,6 +70,15 @@ describe('UrqlClient runtime resolution', () => {
     expect(getUrqlClient()).toBe(client);
   });
 
+  it('initializes one browser client from a factory', () => {
+    const client = createClient('browser');
+    const factory = vi.fn(() => client);
+
+    expect(initializeUrqlClient(factory)).toBe(client);
+    expect(getUrqlClient()).toBe(client);
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the first initialized app client', () => {
     const firstClient = createClient('first');
     const secondClient = createClient('second');

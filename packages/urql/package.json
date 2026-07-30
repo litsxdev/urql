@@ -22,9 +22,10 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./dist/index-server.d.ts",
+      "browser": "./dist/index-browser.js",
+      "import": "./dist/index-server.js",
+      "default": "./dist/index-server.js"
     }
   },
   "files": [
@@ -43,6 +44,7 @@
     "@litsx/core": "*"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "2.1.9",
     "rollup": "^4.62.2",
     "typescript": "^5.1.6",

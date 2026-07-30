@@ -11,9 +11,18 @@ import {
 } from './createUrqlClient.js';
 
 export type UrqlClientResolver = () => Client | null | undefined;
+export type UrqlClientFactory = () => Client | Promise<Client>;
+export type UrqlClientInitializer =
+  | Client
+  | ClientOptions
+  | CreateUrqlClientOptions
+  | UrqlClientFactory;
+type SsrUrqlClientFactoryInitializer = (factory: UrqlClientFactory) => void;
 
 let urqlClient: Client | null = null;
 let urqlClientResolver: UrqlClientResolver | null = null;
+let ssrUrqlClientResolver: UrqlClientResolver | null = null;
+let ssrUrqlClientFactoryInitializer: SsrUrqlClientFactoryInitializer | null = null;
 const URQL_CLIENT_KEY: ExecutionContextKey<Client> =
   createExecutionContextKey<Client>('urql.client');
 
@@ -30,6 +39,10 @@ function isUrqlClient(
   );
 }
 
+function isUrqlClientFactory(input: UrqlClientInitializer): input is UrqlClientFactory {
+  return typeof input === 'function';
+}
+
 function createConfiguredClient(
   input: Client | ClientOptions | CreateUrqlClientOptions
 ): Client {
@@ -44,9 +57,32 @@ function createConfiguredClient(
   return createClient(input as ClientOptions);
 }
 
+export function initializeUrqlClient(input: UrqlClientFactory): Client | void;
 export function initializeUrqlClient(
   input: Client | ClientOptions | CreateUrqlClientOptions
-): Client {
+): Client;
+export function initializeUrqlClient(input: UrqlClientInitializer): Client | void {
+  if (isUrqlClientFactory(input)) {
+    if (ssrUrqlClientFactoryInitializer) {
+      ssrUrqlClientFactoryInitializer(input);
+      return;
+    }
+
+    const client = input();
+    if (client instanceof Promise) {
+      throw new Error(
+        'initializeUrqlClient() factories must be synchronous in the browser. Async factories are supported during SSR.'
+      );
+    }
+    return initializeUrqlClient(client);
+  }
+
+  if (ssrUrqlClientFactoryInitializer) {
+    throw new Error(
+      'initializeUrqlClient() requires a Client factory during SSR so each render receives an isolated client.'
+    );
+  }
+
   if (urqlClient) {
     console.warn('URQL client already initialized, returning existing instance');
     return urqlClient;
@@ -56,10 +92,32 @@ export function initializeUrqlClient(
   return urqlClient;
 }
 
+/** @internal Configures factory registration for the Node SSR entrypoint. */
+export function setSsrUrqlClientFactoryInitializer(
+  initializer: SsrUrqlClientFactoryInitializer | null
+): void {
+  ssrUrqlClientFactoryInitializer = initializer;
+}
+
 export function setUrqlClientResolver(
   resolver: UrqlClientResolver | null
 ): void {
   urqlClientResolver = resolver;
+}
+
+/**
+ * Registers the resolver used by the server-only SSR scope.
+ *
+ * This is deliberately kept separate from `setUrqlClientResolver()`: browser
+ * applications can continue to own their normal resolver, while the SSR entry
+ * point can resolve a client from its request-local scope.
+ *
+ * @internal
+ */
+export function setSsrUrqlClientResolver(
+  resolver: UrqlClientResolver | null
+): void {
+  ssrUrqlClientResolver = resolver;
 }
 
 export function setUrqlClient(
@@ -82,6 +140,14 @@ export function getUrqlClient(): Client {
     : undefined;
   if (executionClient) {
     return executionClient;
+  }
+
+  const ssrResolvedClient = ssrUrqlClientResolver?.() ?? null;
+  if (ssrResolvedClient) {
+    if (executionContext) {
+      setUrqlClient(executionContext, ssrResolvedClient);
+    }
+    return ssrResolvedClient;
   }
 
   const resolvedClient = urqlClientResolver?.() ?? null;
