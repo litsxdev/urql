@@ -1,5 +1,13 @@
 # @litsx/urql
 
+## 0.3.0
+
+### Minor Changes
+
+- 571b22e: Add request-scoped, memoized native URQL clients for SSR through the
+  isomorphic `@litsx/urql` entrypoint, including optional application-defined
+  SSR data extraction.
+
 ## 0.2.1
 
 ### Patch Changes
