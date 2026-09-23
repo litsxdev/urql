@@ -1,5 +1,11 @@
 # @litsx/urql
 
+## 0.4.0
+
+### Minor Changes
+
+- fdeccba: Add request-scoped SSR resources with HTTP request context, per-request data extraction, and deterministic disposal while preserving the existing SSR factory APIs.
+
 ## 0.3.0
 
 ### Minor Changes
