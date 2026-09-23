@@ -52,28 +52,35 @@ initializeUrqlClient({
 });
 ```
 
-For LitSX SSR requests, keep the hook API unchanged and register a request
-client on the execution context:
+For framework-managed LitSX SSR, configure one request resource during server
+startup. Generated server queries and LitSX hooks resolve its native client
+without receiving client or cache arguments:
 
 ```typescript
-import { createUrqlClient, setUrqlClient } from '@litsx/urql';
+import { configureUrqlSsr, createUrqlClient } from '@litsx/urql';
 
-export async function renderPage(props, ctx) {
-  setUrqlClient(
-    ctx,
-    createUrqlClient({
+configureUrqlSsr({
+  createResource({ request, responseHeaders }) {
+    const client = createUrqlClient({
       url: 'https://your-graphql-endpoint.com/graphql',
       fetchOptions: {
-        headers: {
-          cookie: ctx.request?.headers.get('cookie') ?? '',
-        },
+        headers: { cookie: request.headers.get('cookie') ?? '' },
       },
-    })
-  );
+    });
 
-  return <App {...props} />;
-}
+    return {
+      client,
+      extractData: () => undefined,
+    };
+  },
+});
 ```
+
+Frameworks open the resource with
+`runWithUrqlScope({ request, responseHeaders }, render)`. The resource and its
+optional `extractData` and `dispose` callbacks remain isolated to that render.
+The earlier `initializeUrqlClient(factory)`, `registerSsrUrqlData()` and
+`runWithUrqlScope(render)` APIs remain available for compatibility.
 
 ### 3. Use in LitSX Components
 ```tsx
