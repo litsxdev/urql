@@ -8,13 +8,33 @@ import {
 
 export type SsrUrqlDataExtractor<T = unknown> = () => T | Promise<T>;
 
+export type UrqlSsrRequestContext = {
+  request: Request;
+  responseHeaders: Headers;
+};
+
+export type UrqlSsrResource<TData = unknown> = {
+  client: Client;
+  extractData?: SsrUrqlDataExtractor<TData>;
+  dispose?: () => void | Promise<void>;
+};
+
+export type UrqlSsrResourceFactory = (
+  context: UrqlSsrRequestContext
+) => UrqlSsrResource | Promise<UrqlSsrResource>;
+
+export type UrqlSsrConfiguration = {
+  createResource: UrqlSsrResourceFactory;
+};
+
 type SsrUrqlScope = {
-  client: Client | null;
+  resource: UrqlSsrResource | null;
 };
 
 const ssrUrqlScopeStorage = new AsyncLocalStorage<SsrUrqlScope>();
 let ssrUrqlClientFactory: UrqlClientFactory | null = null;
 let ssrUrqlDataExtractor: SsrUrqlDataExtractor | null = null;
+let ssrUrqlResourceFactory: UrqlSsrResourceFactory | null = null;
 
 function getActiveSsrUrqlScope(): SsrUrqlScope {
   const scope = ssrUrqlScopeStorage.getStore();
@@ -28,7 +48,7 @@ function getActiveSsrUrqlScope(): SsrUrqlScope {
 }
 
 function getScopeClient(): Client | undefined {
-  return ssrUrqlScopeStorage.getStore()?.client ?? undefined;
+  return ssrUrqlScopeStorage.getStore()?.resource?.client ?? undefined;
 }
 
 setSsrUrqlClientResolver(getScopeClient);
@@ -40,6 +60,31 @@ setSsrUrqlClientFactoryInitializer((factory) => {
 export function resetSsrUrqlScopeForTesting(): void {
   ssrUrqlClientFactory = null;
   ssrUrqlDataExtractor = null;
+  ssrUrqlResourceFactory = null;
+}
+
+/**
+ * Configures the request-scoped SSR resource created by the framework around
+ * each render. The returned cleanup only removes this exact configuration.
+ */
+export function configureUrqlSsr(configuration: UrqlSsrConfiguration): () => void {
+  if (
+    !configuration ||
+    typeof configuration !== 'object' ||
+    typeof configuration.createResource !== 'function'
+  ) {
+    throw new TypeError(
+      'configureUrqlSsr() expects an object with a createResource function.'
+    );
+  }
+
+  const factory = configuration.createResource;
+  ssrUrqlResourceFactory = factory;
+  return () => {
+    if (ssrUrqlResourceFactory === factory) {
+      ssrUrqlResourceFactory = null;
+    }
+  };
 }
 
 /**
@@ -59,18 +104,61 @@ export function registerSsrUrqlData<T>(extractor: SsrUrqlDataExtractor<T>): () =
   };
 }
 
-/** Runs a callback with a request-local, memoized native URQL Client. */
-export async function runWithUrqlScope<T>(callback: () => T | Promise<T>): Promise<T> {
+export function runWithUrqlScope<T>(callback: () => T | Promise<T>): Promise<T>;
+export function runWithUrqlScope<T>(
+  context: UrqlSsrRequestContext,
+  callback: () => T | Promise<T>
+): Promise<T>;
+/** Runs a callback with one request-local URQL resource. */
+export async function runWithUrqlScope<T>(
+  contextOrCallback: UrqlSsrRequestContext | (() => T | Promise<T>),
+  scopedCallback?: () => T | Promise<T>
+): Promise<T> {
+  const context = typeof contextOrCallback === 'function'
+    ? null
+    : contextOrCallback;
+  const callback = typeof contextOrCallback === 'function'
+    ? contextOrCallback
+    : scopedCallback;
+
   if (typeof callback !== 'function') {
-    throw new TypeError('runWithUrqlScope() expects a callback function.');
+    throw new TypeError(
+      'runWithUrqlScope() expects a callback, optionally preceded by an SSR request context.'
+    );
   }
 
-  const client = ssrUrqlClientFactory ? await ssrUrqlClientFactory() : null;
-  return ssrUrqlScopeStorage.run({ client }, callback);
+  if (ssrUrqlResourceFactory && !context) {
+    throw new Error(
+      'runWithUrqlScope() requires { request, responseHeaders } when configureUrqlSsr() is active.'
+    );
+  }
+
+  const resource = ssrUrqlResourceFactory
+    ? await ssrUrqlResourceFactory(context as UrqlSsrRequestContext)
+    : ssrUrqlClientFactory
+      ? { client: await ssrUrqlClientFactory() }
+      : null;
+
+  if (ssrUrqlResourceFactory && !resource) {
+    throw new TypeError('The URQL SSR resource factory must return a resource.');
+  }
+
+  if (resource && (!resource.client || typeof resource.client !== 'object')) {
+    throw new TypeError('The URQL SSR resource must contain a native client.');
+  }
+
+  return ssrUrqlScopeStorage.run({ resource }, async () => {
+    try {
+      return await callback();
+    } finally {
+      await resource?.dispose?.();
+    }
+  });
 }
 
 /** Extracts application-defined SSR data from the active scope, if registered. */
 export async function getUrqlSsrData(): Promise<unknown | undefined> {
-  getActiveSsrUrqlScope();
-  return ssrUrqlDataExtractor ? await ssrUrqlDataExtractor() : undefined;
+  const scope = getActiveSsrUrqlScope();
+  const extractor = scope.resource?.extractData ?? ssrUrqlDataExtractor;
+  return extractor ? await extractor() : undefined;
 }

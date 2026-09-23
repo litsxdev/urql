@@ -13,6 +13,7 @@ vi.mock('@litsx/core', () => ({
   getCurrentExecutionContext: () => executionState.currentContext,
 }));
 import {
+  configureUrqlSsr,
   getUrqlSsrData,
   registerSsrUrqlData,
   resetSsrUrqlScopeForTesting,
@@ -68,6 +69,109 @@ function initializeClient(factory: () => Client | Promise<Client>): void {
 }
 
 describe('URQL SSR scopes', () => {
+  it('creates one request resource and exposes its client and extracted data', async () => {
+    const client = createClient('request-resource');
+    const request = new Request('https://store.test/products', {
+      headers: { cookie: 'session=one' },
+    });
+    const responseHeaders = new Headers();
+    const createResource = vi.fn((context) => {
+      expect(context).toEqual({ request, responseHeaders });
+      return {
+        client,
+        extractData: () => ({ requestUrl: context.request.url }),
+      };
+    });
+    configureUrqlSsr({ createResource });
+
+    await runWithUrqlScope({ request, responseHeaders }, async () => {
+      expect(getUrqlClient()).toBe(client);
+      await expect(getUrqlSsrData()).resolves.toEqual({
+        requestUrl: 'https://store.test/products',
+      });
+    });
+
+    expect(createResource).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps resource clients and extractors isolated across concurrent requests', async () => {
+    configureUrqlSsr({
+      async createResource({ request }) {
+        await Promise.resolve();
+        const label = new URL(request.url).pathname;
+        return {
+          client: createClient(label),
+          extractData: () => ({ label }),
+        };
+      },
+    });
+
+    const render = (pathname: string) => runWithUrqlScope(
+      {
+        request: new Request(`https://store.test${pathname}`),
+        responseHeaders: new Headers(),
+      },
+      async () => {
+        await Promise.resolve();
+        return {
+          client: getUrqlClient().toJSON(),
+          data: await getUrqlSsrData(),
+        };
+      }
+    );
+
+    const [first, second] = await Promise.all([render('/one'), render('/two')]);
+    expect(first).toEqual({ client: { label: '/one' }, data: { label: '/one' } });
+    expect(second).toEqual({ client: { label: '/two' }, data: { label: '/two' } });
+  });
+
+  it('disposes a request resource after success and failure', async () => {
+    const dispose = vi.fn();
+    configureUrqlSsr({
+      createResource: () => ({ client: createClient('disposable'), dispose }),
+    });
+    const context = {
+      request: new Request('https://store.test'),
+      responseHeaders: new Headers(),
+    };
+
+    await runWithUrqlScope(context, () => getUrqlClient());
+    expect(dispose).toHaveBeenCalledTimes(1);
+
+    await expect(
+      runWithUrqlScope(context, () => {
+        throw new Error('render failed');
+      })
+    ).rejects.toThrow('render failed');
+    expect(dispose).toHaveBeenCalledTimes(2);
+  });
+
+  it('requires request context for configured resource factories', async () => {
+    configureUrqlSsr({
+      createResource: () => ({ client: createClient('request') }),
+    });
+
+    await expect(runWithUrqlScope(() => undefined)).rejects.toThrow(
+      /requires \{ request, responseHeaders \}/
+    );
+  });
+
+  it('rejects an empty configured resource', async () => {
+    configureUrqlSsr({
+      createResource: () => undefined as never,
+    });
+
+    await expect(
+      runWithUrqlScope(
+        {
+          request: new Request('https://store.test'),
+          responseHeaders: new Headers(),
+        },
+        () => undefined
+      )
+    ).rejects.toThrow(/must return a resource/);
+  });
+
   it('memoizes one native client for layout, page, and LitSX-facing resolution', async () => {
     const client = createClient('render');
     const factory = vi.fn(() => client);
