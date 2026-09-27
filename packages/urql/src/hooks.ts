@@ -13,7 +13,6 @@ import {
 import { getUrqlClient } from './UrqlClient.js';
 
 type Unsubscribe = () => void;
-type HookHost = object | undefined;
 
 export interface UseQueryState<
   TData = unknown,
@@ -416,28 +415,18 @@ export function useQuery<
   TVariables extends AnyVariables = AnyVariables,
 >(
   options: UseQueryArgs<TVariables>
-): UseQueryResponse<TData, TVariables>;
-export function useQuery<
-  TData = unknown,
-  TVariables extends AnyVariables = AnyVariables,
->(
-  hostOrOptions: HookHost | UseQueryArgs<TVariables>,
-  providedOptions?: UseQueryArgs<TVariables>
 ): UseQueryResponse<TData, TVariables> {
-  const host = providedOptions ? (hostOrOptions as HookHost) : undefined;
-  const options = (providedOptions ?? hostOrOptions) as UseQueryArgs<TVariables>;
   const [observer] = useState(
-    host,
     () => new QueryObserver<TData, TVariables>(options)
   );
-  const [state, setState] = useState(host, observer.getSnapshot());
+  const [state, setState] = useState(observer.getSnapshot());
 
   observer.update(options);
 
   const contextKey = getDependencyKey(options.context);
   const variablesKey = getDependencyKey(options.variables);
 
-  useAfterUpdate(host, () => {
+  useAfterUpdate(() => {
     const unsubscribe = observer.subscribe(setState);
     if (!observer.isPaused()) {
       void observer.reexecute();
@@ -457,27 +446,17 @@ export function useMutation<
   TVariables extends AnyVariables = AnyVariables,
 >(
   options: UseMutationArgs<TVariables>
-): UseMutationResponse<TData, TVariables>;
-export function useMutation<
-  TData = unknown,
-  TVariables extends AnyVariables = AnyVariables,
->(
-  hostOrOptions: HookHost | UseMutationArgs<TVariables>,
-  providedOptions?: UseMutationArgs<TVariables>
 ): UseMutationResponse<TData, TVariables> {
-  const host = providedOptions ? (hostOrOptions as HookHost) : undefined;
-  const options = (providedOptions ?? hostOrOptions) as UseMutationArgs<TVariables>;
   const [observer] = useState(
-    host,
     () => new MutationObserver<TData, TVariables>(options)
   );
-  const [state, setState] = useState(host, observer.getSnapshot());
+  const [state, setState] = useState(observer.getSnapshot());
 
   observer.update(options);
 
   const contextKey = getDependencyKey(options.context);
 
-  useAfterUpdate(host, () => {
+  useAfterUpdate(() => {
     const unsubscribe = observer.subscribe(setState);
     return () => {
       unsubscribe();
@@ -493,28 +472,18 @@ export function useSubscription<
   TVariables extends AnyVariables = AnyVariables,
 >(
   options: UseSubscriptionArgs<TVariables>
-): UseSubscriptionResponse<TData, TVariables>;
-export function useSubscription<
-  TData = unknown,
-  TVariables extends AnyVariables = AnyVariables,
->(
-  hostOrOptions: HookHost | UseSubscriptionArgs<TVariables>,
-  providedOptions?: UseSubscriptionArgs<TVariables>
 ): UseSubscriptionResponse<TData, TVariables> {
-  const host = providedOptions ? (hostOrOptions as HookHost) : undefined;
-  const options = (providedOptions ?? hostOrOptions) as UseSubscriptionArgs<TVariables>;
   const [observer] = useState(
-    host,
     () => new SubscriptionObserver<TData, TVariables>(options)
   );
-  const [state, setState] = useState(host, observer.getSnapshot());
+  const [state, setState] = useState(observer.getSnapshot());
 
   observer.update(options);
 
   const contextKey = getDependencyKey(options.context);
   const variablesKey = getDependencyKey(options.variables);
 
-  useAfterUpdate(host, () => {
+  useAfterUpdate(() => {
     const unsubscribe = observer.subscribe(setState);
     if (!observer.isPaused()) {
       observer.start();

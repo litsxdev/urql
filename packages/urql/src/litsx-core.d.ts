@@ -18,12 +18,10 @@ declare module '@litsx/core' {
     | null;
 
   export function useState<T>(
-    host: object | undefined,
     initialState: T | (() => T)
   ): [T, (value: T) => void];
 
   export function useAfterUpdate(
-    host: object | undefined,
     callback: () => unknown,
     dependencies: readonly unknown[]
   ): void;
