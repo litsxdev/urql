@@ -30,27 +30,13 @@ const hookRuntime = vi.hoisted(() => ({
   },
 }));
 
-const hookHost = {};
-const useQueryWithHost = useQuery as unknown as (
-  host: object,
-  options: UseQueryArgs<any>
-) => ReturnType<typeof useQuery>;
-const useMutationWithHost = useMutation as unknown as (
-  host: object,
-  options: UseMutationArgs<any>
-) => ReturnType<typeof useMutation>;
-const useSubscriptionWithHost = useSubscription as unknown as (
-  host: object,
-  options: UseSubscriptionArgs<any>
-) => ReturnType<typeof useSubscription>;
-
 vi.mock('@litsx/core', () => ({
   createExecutionContextKey: () =>
     Object.freeze({
       __key: `key-${hookRuntime.nextKeyId++}`,
     }) as ExecutionContextKey,
   getCurrentExecutionContext: () => hookRuntime.currentExecutionContext,
-  useState<T>(_host: unknown, initialState: T | (() => T)) {
+  useState<T>(initialState: T | (() => T)) {
     const slotIndex = hookRuntime.cursor++;
     if (!(slotIndex in hookRuntime.slots)) {
       hookRuntime.slots[slotIndex] =
@@ -69,7 +55,7 @@ vi.mock('@litsx/core', () => ({
 
     return [hookRuntime.slots[slotIndex] as T, setState] as const;
   },
-  useAfterUpdate(_host: unknown, callback: () => unknown) {
+  useAfterUpdate(callback: () => unknown) {
     hookRuntime.cleanups.push(callback() as (() => void) | void);
   },
 }));
@@ -254,7 +240,7 @@ describe('hooks runtime helpers', () => {
     );
     client.query.mockReturnValue(createMockSource(result));
 
-    const [initialState, reexecute] = useQueryWithHost(hookHost, {
+    const [initialState, reexecute] = useQuery({
       client,
       context: { fetchOptions: { headers: { authorization: 'Bearer token' } } },
       query: 'ViewerQuery',
@@ -295,7 +281,7 @@ describe('hooks runtime helpers', () => {
   it('useQuery does not auto-execute while paused', () => {
     const client = createMockClient();
 
-    useQueryWithHost(hookHost, {
+    useQuery({
       client,
       pause: true,
       query: 'PausedQuery',
@@ -319,7 +305,7 @@ describe('hooks runtime helpers', () => {
       })
       .mockReturnValueOnce(deferredSource.source);
 
-    const [, reexecute] = useQueryWithHost(hookHost, {
+    const [, reexecute] = useQuery({
       client,
       query: 'ViewerQuery',
       variables: { id: '123' },
@@ -356,7 +342,7 @@ describe('hooks runtime helpers', () => {
     const deferredSource = createDeferredSource<{ viewer: { id: string } }, { id: string }>();
     client.query.mockReturnValue(deferredSource.source);
 
-    useQueryWithHost(hookHost, {
+    useQuery({
       client,
       query: 'ViewerQuery',
       variables: { id: '123' },
@@ -375,7 +361,7 @@ describe('hooks runtime helpers', () => {
     const result = createResult({ saveProduct: { id: 'p-1' } });
     client.mutation.mockReturnValue(createMockSource(result));
 
-    const [initialState, execute] = useMutationWithHost(hookHost, {
+    const [initialState, execute] = useMutation({
       client,
       context: { fetchOptions: { headers: { 'x-base': '1' } } },
       mutation: 'SaveProduct',
@@ -415,7 +401,7 @@ describe('hooks runtime helpers', () => {
       },
     });
 
-    useSubscriptionWithHost(hookHost, {
+    useSubscription({
       client,
       context: { url: 'wss://example.test/graphql' } as Partial<OperationContext>,
       subscription: 'NotificationsSubscription',
@@ -437,7 +423,7 @@ describe('hooks runtime helpers', () => {
   it('useSubscription does not auto-start while paused', () => {
     const client = createMockClient();
 
-    useSubscriptionWithHost(hookHost, {
+    useSubscription({
       client,
       pause: true,
       subscription: 'NotificationsSubscription',
@@ -463,7 +449,7 @@ describe('hooks runtime helpers', () => {
         },
       });
 
-    const [, start] = useSubscriptionWithHost(hookHost, {
+    const [, start] = useSubscription({
       client,
       subscription: 'NotificationsSubscription',
       variables: { first: 1 },

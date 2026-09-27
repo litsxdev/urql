@@ -41,7 +41,7 @@
     "@urql/core": "^6.0.3"
   },
   "peerDependencies": {
-    "@litsx/core": "*"
+    "@litsx/core": ">=1.0.0-next.8"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
