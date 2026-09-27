@@ -1,5 +1,11 @@
 # @litsx/urql
 
+## 0.4.2
+
+### Patch Changes
+
+- 02e69a0: Keep query, mutation, and subscription observers in contextual LitSX refs so SSR hydration serializes only their JSON-compatible state snapshots.
+
 ## 0.4.1
 
 ### Patch Changes
