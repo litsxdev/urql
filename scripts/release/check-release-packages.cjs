@@ -124,7 +124,7 @@ function assertNodeEsmImport(packageDir, packageRoot, packageName) {
     );
     fs.writeFileSync(
       path.join(packageScopeDir, 'core', 'index.js'),
-      'export const createExecutionContextKey = () => Symbol();\nexport const getCurrentExecutionContext = () => undefined;\nexport const useAfterUpdate = () => {};\nexport const useState = () => {};\n'
+      'export const createExecutionContextKey = () => Symbol();\nexport const getCurrentExecutionContext = () => undefined;\nexport const useAfterUpdate = () => {};\nexport const useExternalStore = () => {};\nexport const useRef = () => ({ value: undefined });\nexport const useState = () => {};\n'
     );
     fs.mkdirSync(path.join(nodeModulesDir, '@urql', 'core'), { recursive: true });
     fs.writeFileSync(

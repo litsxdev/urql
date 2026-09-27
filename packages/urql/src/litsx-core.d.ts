@@ -21,6 +21,16 @@ declare module '@litsx/core' {
     initialState: T | (() => T)
   ): [T, (value: T) => void];
 
+  export function useRef<T>(
+    initialValue?: T
+  ): { value: T | undefined };
+
+  export function useExternalStore<T>(
+    subscribe: (listener: () => void) => () => void,
+    getSnapshot: () => T,
+    getServerSnapshot?: () => T
+  ): T;
+
   export function useAfterUpdate(
     callback: () => unknown,
     dependencies: readonly unknown[]
