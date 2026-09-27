@@ -55,6 +55,25 @@ vi.mock('@litsx/core', () => ({
 
     return [hookRuntime.slots[slotIndex] as T, setState] as const;
   },
+  useExternalStore<T>(
+    subscribe: (listener: () => void) => () => void,
+    getSnapshot: () => T
+  ) {
+    const slotIndex = hookRuntime.cursor++;
+    hookRuntime.slots[slotIndex] = getSnapshot();
+    const unsubscribe = subscribe(() => {
+      hookRuntime.slots[slotIndex] = getSnapshot();
+    });
+    hookRuntime.cleanups.push(unsubscribe);
+    return hookRuntime.slots[slotIndex] as T;
+  },
+  useRef<T>(initialValue?: T) {
+    const slotIndex = hookRuntime.cursor++;
+    if (!(slotIndex in hookRuntime.slots)) {
+      hookRuntime.slots[slotIndex] = { value: initialValue };
+    }
+    return hookRuntime.slots[slotIndex] as { value: T | undefined };
+  },
   useAfterUpdate(callback: () => unknown) {
     hookRuntime.cleanups.push(callback() as (() => void) | void);
   },
@@ -249,6 +268,7 @@ describe('hooks runtime helpers', () => {
     });
 
     expect(initialState.fetching).toBe(false);
+    expect(() => JSON.stringify(initialState)).not.toThrow();
     expect(client.query).toHaveBeenCalledWith(
       'ViewerQuery',
       { id: '123' },
@@ -348,7 +368,7 @@ describe('hooks runtime helpers', () => {
       variables: { id: '123' },
     });
 
-    const cleanup = hookRuntime.cleanups[0];
+    const cleanup = hookRuntime.cleanups.at(-1);
     expect(typeof cleanup).toBe('function');
 
     (cleanup as () => void)();
@@ -464,7 +484,7 @@ describe('hooks runtime helpers', () => {
       { requestPolicy: 'network-only' }
     );
 
-    const cleanup = hookRuntime.cleanups[0];
+    const cleanup = hookRuntime.cleanups.at(-1);
     expect(typeof cleanup).toBe('function');
     (cleanup as () => void)();
     expect(secondUnsubscribe).toHaveBeenCalled();

@@ -83,7 +83,7 @@ The earlier `initializeUrqlClient(factory)`, `registerSsrUrqlData()` and
 `runWithUrqlScope(render)` APIs remain available for compatibility.
 
 The supported Evolit SSR combination is `evolit@0.4.4` or newer,
-`@litsx/core@1.0.0-next.8` or newer, and `@litsx/urql@0.4.1` or newer. These
+`@litsx/core@1.0.0-next.8` or newer, and `@litsx/urql@0.4.2` or newer. These
 versions use LitSX's contextual hook signatures and keep the server-conditioned
 URQL module instance shared across setup, request rendering, data extraction,
 and cleanup.

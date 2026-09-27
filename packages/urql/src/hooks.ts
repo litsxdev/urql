@@ -1,4 +1,4 @@
-import { useAfterUpdate, useState } from '@litsx/core';
+import { useAfterUpdate, useExternalStore, useRef } from '@litsx/core';
 import {
   type AnyVariables,
   type Client,
@@ -416,10 +416,14 @@ export function useQuery<
 >(
   options: UseQueryArgs<TVariables>
 ): UseQueryResponse<TData, TVariables> {
-  const [observer] = useState(
-    () => new QueryObserver<TData, TVariables>(options)
+  const observerRef = useRef<QueryObserver<TData, TVariables>>();
+  observerRef.value ??= new QueryObserver<TData, TVariables>(options);
+  const observer = observerRef.value;
+  const state = useExternalStore(
+    (listener) => observer.subscribe(listener),
+    () => observer.getSnapshot(),
+    () => observer.getSnapshot()
   );
-  const [state, setState] = useState(observer.getSnapshot());
 
   observer.update(options);
 
@@ -427,13 +431,11 @@ export function useQuery<
   const variablesKey = getDependencyKey(options.variables);
 
   useAfterUpdate(() => {
-    const unsubscribe = observer.subscribe(setState);
     if (!observer.isPaused()) {
       void observer.reexecute();
     }
 
     return () => {
-      unsubscribe();
       observer.dispose();
     };
   }, [options.pause, options.requestPolicy, contextKey, variablesKey]);
@@ -447,21 +449,21 @@ export function useMutation<
 >(
   options: UseMutationArgs<TVariables>
 ): UseMutationResponse<TData, TVariables> {
-  const [observer] = useState(
-    () => new MutationObserver<TData, TVariables>(options)
+  const observerRef = useRef<MutationObserver<TData, TVariables>>();
+  observerRef.value ??= new MutationObserver<TData, TVariables>(options);
+  const observer = observerRef.value;
+  const state = useExternalStore(
+    (listener) => observer.subscribe(listener),
+    () => observer.getSnapshot(),
+    () => observer.getSnapshot()
   );
-  const [state, setState] = useState(observer.getSnapshot());
 
   observer.update(options);
 
   const contextKey = getDependencyKey(options.context);
 
   useAfterUpdate(() => {
-    const unsubscribe = observer.subscribe(setState);
-    return () => {
-      unsubscribe();
-      observer.dispose();
-    };
+    return () => observer.dispose();
   }, [contextKey]);
 
   return [state, (variables, context) => observer.execute(variables, context)];
@@ -473,10 +475,14 @@ export function useSubscription<
 >(
   options: UseSubscriptionArgs<TVariables>
 ): UseSubscriptionResponse<TData, TVariables> {
-  const [observer] = useState(
-    () => new SubscriptionObserver<TData, TVariables>(options)
+  const observerRef = useRef<SubscriptionObserver<TData, TVariables>>();
+  observerRef.value ??= new SubscriptionObserver<TData, TVariables>(options);
+  const observer = observerRef.value;
+  const state = useExternalStore(
+    (listener) => observer.subscribe(listener),
+    () => observer.getSnapshot(),
+    () => observer.getSnapshot()
   );
-  const [state, setState] = useState(observer.getSnapshot());
 
   observer.update(options);
 
@@ -484,13 +490,11 @@ export function useSubscription<
   const variablesKey = getDependencyKey(options.variables);
 
   useAfterUpdate(() => {
-    const unsubscribe = observer.subscribe(setState);
     if (!observer.isPaused()) {
       observer.start();
     }
 
     return () => {
-      unsubscribe();
       observer.dispose();
     };
   }, [options.pause, contextKey, variablesKey]);
