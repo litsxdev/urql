@@ -1,5 +1,11 @@
 # @litsx/urql
 
+## 0.4.1
+
+### Patch Changes
+
+- ddcae3c: Use the contextual `useState(initializer)` and `useAfterUpdate(callback, dependencies)` LitSX hook APIs in `useQuery`, `useMutation`, and `useSubscription`, and require `@litsx/core@1.0.0-next.8` or newer.
+
 ## 0.4.0
 
 ### Minor Changes
